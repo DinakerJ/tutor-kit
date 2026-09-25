@@ -1,26 +1,23 @@
 # tutor-kit
 
-A teaching contract for AI coding assistants, for when you need to **understand** the code, not
-just have it.
+A teaching contract for **Claude Code**, for when you need to understand the code, not just
+have it.
 
-Drop it into a repo and the assistant stops writing code at you. It explains the idea first,
-works one small piece at a time, asks you a question after each piece, and waits for your
-answer before continuing.
-
-Works with Claude Code, Codex, Cursor, Windsurf, Gemini CLI, and anything else that reads a
-file.
+Drop it into a repo and Claude stops writing code at you. It explains the idea first, works one
+small piece at a time, asks you a question after each piece, and waits for your answer before
+continuing.
 
 ---
 
 ## The problem
 
-An AI assistant can produce a working feature faster than you can read it. That is fine until
-someone asks you to defend it — in a code review, a design discussion, an interview, or a panel.
-Then the code being correct is not enough. You have to know why it is shaped that way, what it
+Claude can produce a working feature faster than you can read it. That is fine until someone
+asks you to defend it — in a code review, a design discussion, an interview, or a panel. Then
+the code being correct is not enough. You have to know why it is shaped that way, what it
 assumes, and what breaks if the assumptions fail.
 
-The default behaviour of every assistant works against this. Ask a question, get a code block.
-Say "ok", get three more files. Nothing stops to check whether you followed.
+The default behaviour works against this. Ask a question, get a code block. Say "ok", get three
+more files. Nothing stops to check whether you followed.
 
 `tutor-kit` inverts that.
 
@@ -28,8 +25,8 @@ Say "ok", get three more files. Nothing stops to check whether you followed.
 
 ## Quickstart
 
-There are two installers. They do the same thing and write byte-identical files, but they are
-**not interchangeable** — pick the one that matches the shell you are typing into.
+Two installers, same result, byte-identical output. Pick the one matching the shell you are
+typing into — they are **not** interchangeable.
 
 | If your prompt looks like | You are in | Use |
 | --- | --- | --- |
@@ -75,12 +72,6 @@ Or without cloning:
 curl -fsSL https://raw.githubusercontent.com/DinakerJ/tutor-kit/main/install.sh | bash -s -- .
 ```
 
-### Either way
-
-Then open your repo in any AI coding tool and say `hello`. It should ask you three
-configuration questions and wait. If it starts working instead, the file was not picked up —
-check that you ran the install against the repo root.
-
 ---
 
 ## What gets installed
@@ -88,26 +79,56 @@ check that you ran the install against the repo root.
 ```
 your-repo/
 ├── TUTOR.md          the contract itself
-├── CLAUDE.md         ┐
-├── AGENTS.md         │  two-line pointers, one per tool,
-├── GEMINI.md         │  each saying "read TUTOR.md"
-├── .cursorrules      │
-└── .windsurfrules    ┘
+└── CLAUDE.md         four lines that import it
 ```
 
-One source of truth, thin pointers. Every tool auto-loads a different filename, so rather than
-maintain five copies that drift apart, each tool gets a one-line file telling it where to look.
+Two files. `CLAUDE.md` is not a summary of the contract — it is an **import** of it:
 
-If a pointer file already exists in your repo, the installer leaves it alone and tells you what
-line to add yourself. Your existing project instructions and this contract are different things
-and both should apply.
+```markdown
+# Operating contract
+
+@TUTOR.md
+```
+
+That `@TUTOR.md` line matters more than it looks. Claude Code expands `@path` imports into
+context when the session starts, so the full contract is loaded and in front of Claude before
+you type anything. Relative paths resolve against the file holding the import, and imports
+nest up to four hops deep.
+
+> **Do not put the filename in backticks.** Claude Code's import parser deliberately skips
+> Markdown code spans and fenced code blocks, so `` `@TUTOR.md` `` imports nothing. A
+> `CLAUDE.md` that merely *asks* Claude to go read `TUTOR.md` leaves the contract to chance:
+> sometimes Claude reads it, sometimes it just says hello back. The unquoted import is what
+> makes the behaviour deterministic.
+
+If `CLAUDE.md` already exists, the installer leaves it alone and prints the line to add
+yourself. Your project instructions and this contract are different things and both should
+apply — they are concatenated into context, not overridden.
+
+---
+
+## Verifying it took
+
+Start a **new** session in the target repo and say nothing but `hello`.
+
+Claude should reply by asking the three configuration questions — depth, pace, purpose — and
+then stop and wait. If it starts working, or greets you back, something did not load.
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| Greets you back, no questions | `CLAUDE.md` mentions `TUTOR.md` in backticks instead of importing it | Replace the mention with a bare `@TUTOR.md` line, or re-run the installer |
+| No questions at all | The session was already open when you installed | `CLAUDE.md` loads at session start, so start a new session |
+| No questions at all | Claude was launched from a subdirectory or a parent | Run it from the repo root, where `CLAUDE.md` lives |
+
+To see exactly what loaded, run `/context` in a session and check the **Memory files** list.
+Both `CLAUDE.md` and `TUTOR.md` should appear.
 
 ---
 
 ## Configuring it
 
-The contract is not one fixed behaviour. It asks you three questions at the start of every
-session and adapts.
+The contract is not one fixed behaviour. It asks three questions at the start of every session
+and adapts.
 
 **Contract depth**
 
@@ -144,15 +165,15 @@ A selection. The full text is in [`TUTOR.md`](TUTOR.md).
 - **Explain before writing.** Never opens with a code block.
 - **Every line gets explained.** Not a summary of what a block does — the actual constructs,
   calls, and choices.
-- **Validate your reading first.** When you say what you think the code does, the assistant
-  judges your claims point by point *before* adding anything new. Otherwise a fresh explanation
-  talks past you and you cannot tell which parts of your model survived.
-- **"ok" is not understanding.** The assistant does not advance on acknowledgement. It asks a
-  real question and waits.
+- **Validate your reading first.** When you say what you think the code does, Claude judges
+  your claims point by point *before* adding anything new. Otherwise a fresh explanation talks
+  past you and you cannot tell which parts of your model survived.
+- **"ok" is not understanding.** It does not advance on acknowledgement. It asks a real
+  question and waits.
 - **Name the file and line** an explanation comes from. And say so explicitly when the thing
   being discussed does not exist yet.
-- **Loud versus silent failures.** When a bug turns up, the walkthrough states which kind it is,
-  because the silent ones are the ones that cost you days.
+- **Loud versus silent failures.** When a bug turns up, the walkthrough states which kind it
+  is, because the silent ones are the ones that cost you days.
 - **Plain language.** A banned-words list, and a rule to replace computer-science vocabulary
   with plain description.
 - **Commit messages describe the code**, not the tutoring. Someone may read the log to judge
@@ -167,31 +188,31 @@ At depth `B` or `C`:
 > A phase is complete only when **Built and Tested and Explained-back-by-you**.
 
 Two of three is not complete. Working code you cannot explain does not pass. **Only you can
-mark *Explained*** — the assistant may never infer it, and may never mark it on your behalf.
+mark *Explained*** — Claude may never infer it, and may never mark it on your behalf.
 
-Progress lives in a single `PROGRESS.md` holding both the plan and the ledger, because a
-phase's checklist is its tracker.
+Progress lives in a single `PROGRESS.md` holding both the plan and the ledger, because the
+checklist for a phase is its tracker.
 
 ---
 
-## Claude Code: on demand instead
+## On demand instead of always on
 
 The install above makes the contract always on for that repo. If you would rather invoke it
 explicitly with `/tutor-kit`:
 
 ```bash
 mkdir -p ~/.claude/skills/tutor-kit
-cp TUTOR.md INSTALL.md install.sh install.ps1 ~/.claude/skills/tutor-kit/
+cp TUTOR.md ~/.claude/skills/tutor-kit/
 ```
 
 In Windows PowerShell:
 
 ```powershell
 New-Item -ItemType Directory -Force "$HOME\.claude\skills\tutor-kit" | Out-Null
-Copy-Item TUTOR.md, INSTALL.md, install.sh, install.ps1 "$HOME\.claude\skills\tutor-kit\"
+Copy-Item TUTOR.md "$HOME\.claude\skills\tutor-kit\"
 ```
 
-Then create `~/.claude/skills/tutor-kit/SKILL.md` containing a YAML header and a pointer:
+Then create `~/.claude/skills/tutor-kit/SKILL.md`:
 
 ```markdown
 ---
@@ -199,43 +220,24 @@ name: tutor-kit
 description: Teaching contract for learn-while-building work. Explains before writing code, one unit per turn, comprehension questions, Built/Tested/Explained gate. Use when the user must be able to defend every line.
 ---
 
-Read `TUTOR.md` in this skill's directory now and follow it for the rest of the session.
+Read TUTOR.md in this directory now and follow it for the rest of the session.
 Start by asking the three configuration questions at the top of that file, and wait.
 ```
 
-The trade-off is that you have to remember to type it. Always-on cannot be forgotten, which
-matters more than it sounds — the sessions where you forget are exactly the ones where you end
-up with code you cannot explain.
+Skills under `~/.claude/skills/` are available in every project. The trade-off is that you have
+to remember to type it. Always-on cannot be forgotten, which matters more than it sounds — the
+sessions where you forget are exactly the ones where you end up with code you cannot explain.
 
 ---
 
-## Tool support
+## Other tools
 
-| Tool | File it reads | Installed by default |
-|---|---|---|
-| Claude Code | `CLAUDE.md` | yes |
-| Codex CLI | `AGENTS.md` | yes |
-| Gemini CLI | `GEMINI.md` | yes |
-| Cursor | `.cursorrules` | yes |
-| Windsurf | `.windsurfrules` | yes |
-| Aider | passed via `--read` or `.aider.conf.yml` | manual |
-| Anything else | paste `TUTOR.md` into the system prompt | manual |
+This kit targets Claude Code. `TUTOR.md` itself is plain Markdown with no tool-specific syntax,
+so it works anywhere a file can be handed to a model — Codex via a root `AGENTS.md`, Cursor via
+`.cursor/rules/`, or pasted straight into a system prompt. Wiring those up is manual for now;
+see [INSTALL.md](INSTALL.md).
 
-For manual wiring, per-tool detail, and what to do when a filename changes, see
-[INSTALL.md](INSTALL.md).
-
-These filenames move as the tools change. If one stops working, check that tool's current docs
-— the contract does not change, only the pointer does.
+Earlier versions of this kit wrote pointer files for five tools. The installer now detects
+those leftovers and tells you they are safe to delete.
 
 ---
-
-## Origin
-
-Written while building a graded capstone project that had to be defended to a panel. The rules
-are not theoretical; each one exists because its absence caused a specific problem — code that
-worked and could not be explained, a correction that talked past the misunderstanding, a phase
-marked done on the strength of someone saying "ok".
-
-## License
-
-MIT. See [LICENSE](LICENSE).

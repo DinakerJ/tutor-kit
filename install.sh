@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install tutor mode into a repository so it runs automatically in every session.
+# Install tutor mode into a repository so it runs automatically in every Claude Code session.
 #
 #   ./install.sh /path/to/repo      install into that repo
 #   ./install.sh .                  install into the current directory
@@ -43,27 +43,57 @@ else
     echo "wrote   TUTOR.md (downloaded)"
 fi
 
+# The @TUTOR.md line is a Claude Code import: it expands the contract into context at launch.
+# It must stay outside backticks - Claude Code skips imports inside code spans, which means a
+# backticked mention loads nothing and leaves the contract up to chance.
 POINTER='# Operating contract
 
-Read `TUTOR.md` in this repository and follow it for the whole session. Start by asking the
-three configuration questions at the top of that file, and wait for the answers.'
+@TUTOR.md
 
-for f in CLAUDE.md AGENTS.md GEMINI.md .cursorrules .windsurfrules; do
-    dest="$TARGET/$f"
-    if [ -e "$dest" ]; then
-        if grep -q 'TUTOR.md' "$dest" 2>/dev/null; then
-            echo "ok      $f (already points at TUTOR.md)"
-        else
-            echo "SKIPPED $f — it already exists. Add this line to the top of it:"
-            echo "          Read \`TUTOR.md\` in this repository and follow it for the whole session."
-        fi
+The contract imported above governs this entire session.
+
+Your first action in a new session, including a reply to a bare greeting such as "hello", is
+to ask the three configuration questions at the top of that contract (depth, pace, purpose),
+then stop and wait. Do not assume defaults. Do not start work, summarise the repo, or answer
+anything else until all three are answered.'
+
+dest="$TARGET/CLAUDE.md"
+if [ -e "$dest" ]; then
+    if grep -q '@TUTOR.md' "$dest" 2>/dev/null; then
+        echo "ok      CLAUDE.md (already imports TUTOR.md)"
+    elif grep -qF 'Read `TUTOR.md` in this repository' "$dest" 2>/dev/null; then
+        printf '%s
+' "$POINTER" > "$dest"
+        echo "wrote   CLAUDE.md (upgraded an older tutor-kit pointer to a real import)"
+    elif grep -q 'TUTOR.md' "$dest" 2>/dev/null; then
+        echo "ACTION  CLAUDE.md mentions TUTOR.md but does not import it."
+        echo "          A backticked mention does not load the contract. Add this line, unquoted:"
+        echo "          @TUTOR.md"
     else
-        printf '%s\n' "$POINTER" > "$dest"
-        echo "wrote   $f"
+        echo "SKIPPED CLAUDE.md - it already exists. Add this line to the top of it:"
+        echo "          @TUTOR.md"
+    fi
+else
+    printf '%s\n' "$POINTER" > "$dest"
+    echo "wrote   CLAUDE.md"
+fi
+
+# Earlier versions of this kit also wrote pointer files for other tools. Claude Code ignores
+# them, and a stray AGENTS.md can confuse a later reader, so point them out.
+leftovers=""
+for f in AGENTS.md GEMINI.md .cursorrules .windsurfrules; do
+    if [ -e "$TARGET/$f" ] && grep -q 'TUTOR.md' "$TARGET/$f" 2>/dev/null; then
+        leftovers="$leftovers $f"
     fi
 done
+if [ -n "$leftovers" ]; then
+    echo
+    echo "note    leftover pointer files from an earlier tutor-kit install:$leftovers"
+    echo "        Claude Code does not read them. Safe to delete:"
+    echo "          (cd '$TARGET' && rm$leftovers)"
+fi
 
 echo
 echo "Installed into $TARGET"
-echo "Verify: start a session there and say only 'hello'."
+echo "Verify: start a NEW session there and say only 'hello'."
 echo "The assistant should ask three configuration questions and wait."

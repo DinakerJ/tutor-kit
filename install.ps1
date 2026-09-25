@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-    Install tutor mode into a repository so it runs automatically in every session.
+    Install tutor mode into a repository so it runs automatically in every Claude Code session.
 
 .DESCRIPTION
     Windows/PowerShell counterpart to install.sh. Copies TUTOR.md into the target repo and
-    writes the thin pointer files that each AI coding tool auto-loads. Behaviour matches
-    install.sh: existing pointer files are never overwritten.
+    writes a CLAUDE.md that imports it. Behaviour matches install.sh; an existing CLAUDE.md is
+    never overwritten.
 
 .PARAMETER Target
     The repo to install into. Defaults to the current directory.
@@ -15,7 +15,7 @@
     Install into the current directory.
 
 .EXAMPLE
-    .\install.ps1 C:\path\to\repo
+    .\install.ps1 "C:\path\to\repo"
     Install into that repo.
 
 .EXAMPLE
@@ -77,29 +77,59 @@ if ($srcDir) {
     Write-Host "wrote   TUTOR.md (downloaded)"
 }
 
+# The @TUTOR.md line is a Claude Code import: it expands the contract into context at launch.
+# It must stay outside backticks - Claude Code skips imports inside code spans, which means a
+# backticked mention loads nothing and leaves the contract up to chance.
 $pointer = @'
 # Operating contract
 
-Read `TUTOR.md` in this repository and follow it for the whole session. Start by asking the
-three configuration questions at the top of that file, and wait for the answers.
+@TUTOR.md
+
+The contract imported above governs this entire session.
+
+Your first action in a new session, including a reply to a bare greeting such as "hello", is
+to ask the three configuration questions at the top of that contract (depth, pace, purpose),
+then stop and wait. Do not assume defaults. Do not start work, summarise the repo, or answer
+anything else until all three are answered.
 '@
 
-foreach ($name in @("CLAUDE.md", "AGENTS.md", "GEMINI.md", ".cursorrules", ".windsurfrules")) {
-    $dest = Join-Path $TargetPath $name
-    if (Test-Path -LiteralPath $dest) {
-        if (Select-String -LiteralPath $dest -Pattern "TUTOR.md" -SimpleMatch -Quiet) {
-            Write-Host "ok      $name (already points at TUTOR.md)"
-        } else {
-            Write-Host "SKIPPED $name - it already exists. Add this line to the top of it:"
-            Write-Host "          Read ``TUTOR.md`` in this repository and follow it for the whole session."
-        }
-    } else {
+$dest = Join-Path $TargetPath "CLAUDE.md"
+if (Test-Path -LiteralPath $dest) {
+    if (Select-String -LiteralPath $dest -Pattern "@TUTOR.md" -SimpleMatch -Quiet) {
+        Write-Host "ok      CLAUDE.md (already imports TUTOR.md)"
+    } elseif (Select-String -LiteralPath $dest -Pattern 'Read `TUTOR.md` in this repository' -SimpleMatch -Quiet) {
         Write-Utf8NoBom -Path $dest -Content ($pointer + "`n")
-        Write-Host "wrote   $name"
+        Write-Host "wrote   CLAUDE.md (upgraded an older tutor-kit pointer to a real import)"
+    } elseif (Select-String -LiteralPath $dest -Pattern "TUTOR.md" -SimpleMatch -Quiet) {
+        Write-Host "ACTION  CLAUDE.md mentions TUTOR.md but does not import it."
+        Write-Host "          A backticked mention does not load the contract. Add this line, unquoted:"
+        Write-Host "          @TUTOR.md"
+    } else {
+        Write-Host "SKIPPED CLAUDE.md - it already exists. Add this line to the top of it:"
+        Write-Host "          @TUTOR.md"
     }
+} else {
+    Write-Utf8NoBom -Path $dest -Content ($pointer + "`n")
+    Write-Host "wrote   CLAUDE.md"
+}
+
+# Earlier versions of this kit also wrote pointer files for other tools. Claude Code ignores
+# them, and a stray AGENTS.md can confuse a later reader, so point them out.
+$leftovers = @()
+foreach ($n in @("AGENTS.md", "GEMINI.md", ".cursorrules", ".windsurfrules")) {
+    $p = Join-Path $TargetPath $n
+    if ((Test-Path -LiteralPath $p) -and (Select-String -LiteralPath $p -Pattern "TUTOR.md" -SimpleMatch -Quiet)) {
+        $leftovers += $n
+    }
+}
+if ($leftovers.Count -gt 0) {
+    Write-Host ""
+    Write-Host "note    leftover pointer files from an earlier tutor-kit install: $($leftovers -join ' ')"
+    Write-Host "        Claude Code does not read them. Safe to delete:"
+    Write-Host "          Remove-Item $($leftovers -join ', ')"
 }
 
 Write-Host ""
 Write-Host "Installed into $TargetPath"
-Write-Host "Verify: start a session there and say only 'hello'."
+Write-Host "Verify: start a NEW session there and say only 'hello'."
 Write-Host "The assistant should ask three configuration questions and wait."
