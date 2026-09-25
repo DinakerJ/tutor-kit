@@ -28,7 +28,40 @@ Say "ok", get three more files. Nothing stops to check whether you followed.
 
 ## Quickstart
 
-**macOS, Linux, WSL, or Git Bash**
+There are two installers. They do the same thing and write byte-identical files, but they are
+**not interchangeable** — pick the one that matches the shell you are typing into.
+
+| If your prompt looks like | You are in | Use |
+| --- | --- | --- |
+| `PS C:\Users\you\repo>` | Windows PowerShell | `install.ps1` |
+| `you@host:~/repo$` | macOS, Linux, WSL, Git Bash | `install.sh` |
+
+### Windows PowerShell
+
+`cd` into the repo you want to install into, then:
+
+```powershell
+irm https://raw.githubusercontent.com/DinakerJ/tutor-kit/main/install.ps1 | iex
+```
+
+Or from a clone, naming the target explicitly:
+
+```powershell
+git clone https://github.com/DinakerJ/tutor-kit.git
+cd tutor-kit
+powershell -ExecutionPolicy Bypass -File .\install.ps1 "C:\path\to\your\repo"
+```
+
+Quote the path if it contains spaces or an apostrophe.
+
+> ⚠️ **The `curl ... | bash` line below does not work in PowerShell.** It fails with
+> `bash : The term 'bash' is not recognized`. That is expected, and no change to this repo can
+> fix it — there are two independent reasons. `curl` in Windows PowerShell is an alias for
+> `Invoke-WebRequest`, which rejects `-fsSL`; and `bash` is not on `PATH`, even when Git for
+> Windows is installed, because the installer only adds `Git\cmd` (which holds `git.exe`, not
+> `bash.exe`). Use `install.ps1` above.
+
+### macOS, Linux, WSL, or Git Bash
 
 ```bash
 git clone https://github.com/DinakerJ/tutor-kit.git
@@ -42,26 +75,7 @@ Or without cloning:
 curl -fsSL https://raw.githubusercontent.com/DinakerJ/tutor-kit/main/install.sh | bash -s -- .
 ```
 
-**Windows PowerShell**
-
-Run this from inside the repo you want to install into:
-
-```powershell
-irm https://raw.githubusercontent.com/DinakerJ/tutor-kit/main/install.ps1 | iex
-```
-
-Or from a clone, naming the target:
-
-```powershell
-git clone https://github.com/DinakerJ/tutor-kit.git
-cd tutor-kit
-powershell -ExecutionPolicy Bypass -File .\install.ps1 C:\path\to\your\repo
-```
-
-Use `install.ps1` here, not the `curl | bash` line above. In Windows PowerShell `curl` is an
-alias for `Invoke-WebRequest`, which rejects `-fsSL`, and `bash` is not on `PATH` even when Git
-for Windows is installed. The two installers write byte-identical files, so it makes no
-difference which one a repo was set up with.
+### Either way
 
 Then open your repo in any AI coding tool and say `hello`. It should ask you three
 configuration questions and wait. If it starts working instead, the file was not picked up —
