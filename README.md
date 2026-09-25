@@ -28,6 +28,8 @@ Say "ok", get three more files. Nothing stops to check whether you followed.
 
 ## Quickstart
 
+**macOS, Linux, WSL, or Git Bash**
+
 ```bash
 git clone https://github.com/DinakerJ/tutor-kit.git
 cd tutor-kit
@@ -39,6 +41,27 @@ Or without cloning:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DinakerJ/tutor-kit/main/install.sh | bash -s -- .
 ```
+
+**Windows PowerShell**
+
+Run this from inside the repo you want to install into:
+
+```powershell
+irm https://raw.githubusercontent.com/DinakerJ/tutor-kit/main/install.ps1 | iex
+```
+
+Or from a clone, naming the target:
+
+```powershell
+git clone https://github.com/DinakerJ/tutor-kit.git
+cd tutor-kit
+powershell -ExecutionPolicy Bypass -File .\install.ps1 C:\path\to\your\repo
+```
+
+Use `install.ps1` here, not the `curl | bash` line above. In Windows PowerShell `curl` is an
+alias for `Invoke-WebRequest`, which rejects `-fsSL`, and `bash` is not on `PATH` even when Git
+for Windows is installed. The two installers write byte-identical files, so it makes no
+difference which one a repo was set up with.
 
 Then open your repo in any AI coding tool and say `hello`. It should ask you three
 configuration questions and wait. If it starts working instead, the file was not picked up —
@@ -144,7 +167,14 @@ explicitly with `/tutor-kit`:
 
 ```bash
 mkdir -p ~/.claude/skills/tutor-kit
-cp TUTOR.md INSTALL.md install.sh ~/.claude/skills/tutor-kit/
+cp TUTOR.md INSTALL.md install.sh install.ps1 ~/.claude/skills/tutor-kit/
+```
+
+In Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\.claude\skills\tutor-kit" | Out-Null
+Copy-Item TUTOR.md, INSTALL.md, install.sh, install.ps1 "$HOME\.claude\skills\tutor-kit\"
 ```
 
 Then create `~/.claude/skills/tutor-kit/SKILL.md` containing a YAML header and a pointer:

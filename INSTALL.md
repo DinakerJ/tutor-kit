@@ -10,11 +10,21 @@ gets a one-line file telling it to read `TUTOR.md`.
 
 ## Quick install
 
-From inside `tutor-kit/`:
+From inside `tutor-kit/` on macOS, Linux, WSL, or Git Bash:
 
 ```bash
 ./install.sh /path/to/target/repo
 ```
+
+In Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1 C:\path\to\target\repo
+```
+
+The two installers are equivalent and write byte-identical files. Use `install.ps1` on
+Windows: `curl` there is an alias for `Invoke-WebRequest` and rejects `-fsSL`, and `bash` is
+not on `PATH` even with Git for Windows installed.
 
 That copies `TUTOR.md` to the target repo root and writes the pointer files. Re-running it is
 safe — it will not overwrite an existing `CLAUDE.md` or `AGENTS.md` without asking.
@@ -69,6 +79,13 @@ it explicitly with `/tutor-mode`, install it as a skill instead:
 ```bash
 mkdir -p ~/.claude/skills/tutor-mode
 cp TUTOR.md ~/.claude/skills/tutor-mode/SKILL.md
+```
+
+In Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\.claude\skills\tutor-mode" | Out-Null
+Copy-Item TUTOR.md "$HOME\.claude\skills\tutor-mode\SKILL.md"
 ```
 
 Then add this YAML block at the very top of that copy, above everything else:
